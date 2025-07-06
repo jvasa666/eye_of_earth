@@ -1,5 +1,5 @@
 # EYE OF EARTH - GLOBAL LEADER TRANSPARENCY SYSTEM
-# VERSION: 1.5 TIMEOUT + STABILITY PATCH
+# VERSION: 2.0 STABILITY + TIMEOUT + CACHING
 # AUTHOR: AI Command Unit
 
 import asyncio
@@ -19,13 +19,13 @@ from datetime import datetime
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-
 from transformers import pipeline
+import time
 
 summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6")
 sentiment = pipeline("sentiment-analysis", model="distilbert-base-uncased-finetuned-sst-2-english")
 
-# === MODULE: GLOBAL SCRAPER ===
+# === CONFIG ===
 COUNTRIES = [
     "un.org", "whitehouse.gov", "gov.uk", "china.org.cn", "india.gov.in",
     "europa.eu", "russia.ru", "gov.za", "japan.go.jp", "brazil.gov.br"
@@ -57,13 +57,18 @@ HEADERS = {
     'User-Agent': 'EyeOfEarth/1.0 (Global Transparency Bot)'
 }
 
+CACHE = {}
+
 async def fetch(session, url):
     try:
+        if url in CACHE:
+            return CACHE[url]
         async with session.get(url, timeout=20) as response:
             html = await response.text()
             soup = BeautifulSoup(html, "html.parser")
             clean_text = soup.get_text()
-            return clean_text[:2000]
+            CACHE[url] = clean_text[:2000]
+            return CACHE[url]
     except Exception as e:
         print(f"⚠️ Error fetching {url}: {e}")
         return f"ERROR: {e}"
@@ -71,13 +76,14 @@ async def fetch(session, url):
 async def scrape_all():
     results = {}
     async with aiohttp.ClientSession(headers=HEADERS) as session:
-        tasks = [fetch(session, f"https://{domain}") for domain in COUNTRIES]
-        pages = await asyncio.gather(*tasks)
-        for i, page in enumerate(pages):
-            results[COUNTRIES[i]] = page
+        for domain in COUNTRIES:
+            print(f"🔄 Scraping {domain}...")
+            text = await fetch(session, f"https://{domain}")
+            results[domain] = text
+            await asyncio.sleep(1.5)  # Throttle requests
     return results
 
-# === MODULE: MULTI-LEADER ANALYSIS ===
+# === ANALYSIS ===
 CRISIS_KEYWORDS = ["protest", "corruption", "blackout", "violence", "collapse", "scandal", "emergency"]
 
 def analyze_leaders_by_name(domain, text):
@@ -119,6 +125,8 @@ def analyze_leaders_by_name(domain, text):
 def launch_dashboard(data):
     st.set_page_config(page_title="Eye of Earth", layout="wide")
     st.title("🌍 EYE OF EARTH: GLOBAL LEADER TRANSPARENCY")
+
+    st.info("💡 If any country is missing, it's likely still scraping or failed.")
 
     for item in data:
         if any(e for e in item['leaders'] if e['summary'] == "Analysis failed."):
