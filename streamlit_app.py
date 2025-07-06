@@ -68,9 +68,30 @@ def load_models():
 
 summarizer, sentiment, emotion = load_models()
 
+def google_search_mock(queries):
+    mock_data = {
+        "default": [
+            {"title": "Recent Policy", "link": "#", "snippet": "Leader promotes reforms to improve national unity and trade."},
+            {"title": "Address to Nation", "link": "#", "snippet": "Leader speaks on tackling inflation and building better infrastructure."}
+        ],
+        "crisis": [
+            {"title": "Protests Erupt", "link": "#", "snippet": "Citizens protest new government decision, demanding transparency."},
+            {"title": "Corruption Allegations", "link": "#", "snippet": "Leader accused of misconduct, opposition demands resignation."}
+        ]
+    }
+    query = queries[0].lower()
+    if any(k in query for k in ["scandal", "corruption", "protest", "crisis"]):
+        return mock_data["crisis"]
+    return mock_data["default"]
+
 async def fetch_news(session, leader, country):
-    await asyncio.sleep(0.2)
-    return f"{leader} of {country} gave a speech about growth and security."
+    try:
+        query = f"{leader} {country} recent speech or announcement"
+        results = google_search_mock([query])
+        snippets = " ".join([item['snippet'] for item in results])
+        return snippets
+    except:
+        return f"{leader} gave a speech in {country}."
 
 def analyze_news(leader, title, text, country):
     try:
