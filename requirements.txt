@@ -1,9 +1,9 @@
 streamlit
 aiohttp
 transformers
+torch
 pandas
-numpy
 plotly
-beautifulsoup4
 SPARQLWrapper
-
+numpy
+beautifulsoup4
