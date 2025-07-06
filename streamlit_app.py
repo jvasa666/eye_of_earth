@@ -1,5 +1,5 @@
 # EYE OF EARTH - GLOBAL LEADER TRANSPARENCY SYSTEM
-# VERSION: 1.4 MULTI-LEADER BREAKDOWN
+# VERSION: 1.5 TIMEOUT + STABILITY PATCH
 # AUTHOR: AI Command Unit
 
 import asyncio
@@ -59,9 +59,13 @@ HEADERS = {
 
 async def fetch(session, url):
     try:
-        async with session.get(url, timeout=10) as response:
-            return await response.text()
+        async with session.get(url, timeout=20) as response:
+            html = await response.text()
+            soup = BeautifulSoup(html, "html.parser")
+            clean_text = soup.get_text()
+            return clean_text[:2000]
     except Exception as e:
+        print(f"⚠️ Error fetching {url}: {e}")
         return f"ERROR: {e}"
 
 async def scrape_all():
@@ -70,7 +74,7 @@ async def scrape_all():
         tasks = [fetch(session, f"https://{domain}") for domain in COUNTRIES]
         pages = await asyncio.gather(*tasks)
         for i, page in enumerate(pages):
-            results[COUNTRIES[i]] = page[:2000]
+            results[COUNTRIES[i]] = page
     return results
 
 # === MODULE: MULTI-LEADER ANALYSIS ===
@@ -112,12 +116,13 @@ def analyze_leaders_by_name(domain, text):
             })
     return results
 
-# === DATABASE, EMAIL, and DASHBOARD modules are unchanged and should be appended next ===
-# Only update launch_dashboard(data) to use the new data structure
-
 def launch_dashboard(data):
     st.set_page_config(page_title="Eye of Earth", layout="wide")
     st.title("🌍 EYE OF EARTH: GLOBAL LEADER TRANSPARENCY")
+
+    for item in data:
+        if any(e for e in item['leaders'] if e['summary'] == "Analysis failed."):
+            st.error(f"⚠️ Analysis failed for: {item['domain']}")
 
     for nation in data:
         st.header(f"🌐 {nation['country']} ({nation['domain']})")
@@ -128,7 +133,7 @@ def launch_dashboard(data):
                 st.metric(label="Trust Score", value=f"{leader['trust']}/100")
                 st.metric(label="Truth Index", value=f"{leader['truth_index']}/100")
             with col2:
-                st.markdown(f"**🧑‍⚖️ {leader['title']}: {leader['name']}**")
+                st.markdown(f"**🦖 {leader['title']}: {leader['name']}**")
                 st.markdown(f"**📊 Sentiment:** {leader['sentiment']}")
                 if leader['crisis']:
                     st.error("🚨 Crisis Detected")
@@ -141,7 +146,8 @@ if __name__ == "__main__":
     raw = asyncio.run(scrape_all())
     processed = []
     for domain, text in raw.items():
-        if text.startswith("ERROR"): continue
+        if text.startswith("ERROR"): 
+            continue
         leader_data = analyze_leaders_by_name(domain, text)
         processed.append({"domain": domain, "country": domain.split(".")[0].upper(), "leaders": leader_data})
     launch_dashboard(processed)
