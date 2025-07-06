@@ -1,0 +1,12 @@
+aiohttp
+requests
+pandas
+geopandas
+streamlit
+plotly
+beautifulsoup4
+langdetect
+transformers
+huggingface_hub
+scikit-learn
+torch
