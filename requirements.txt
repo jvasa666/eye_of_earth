@@ -1,3 +1,10 @@
 streamlit
+pandas
+plotly
+requests
+beautifulsoup4
+numpy
 qrcode
 Pillow
+transformers
+torch # or tensorflow, depending on your preference for the transformers backend
